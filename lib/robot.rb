@@ -3,6 +3,7 @@ class Robot
 attr_reader :position, :items
 attr_accessor :equipped_weapon, :health
 
+
   def initialize
     @position = [0, 0]
     @items = []
@@ -36,10 +37,17 @@ def wound(damage)
 ##########################
   def attack(enemy)
     attack!(enemy)
-    if @equipped_weapon == nil
-      enemy.wound(5)
-    else
-      @equipped_weapon.hit(enemy)
+    if grenade_range?(enemy)
+      if equipped_weapon.is_a?(Grenade)
+        equipped_weapon.hit(enemy)
+        self.equipped_weapon = nil
+      end
+    elsif with_in_reach?(enemy)
+      if equipped_weapon == nil
+        enemy.wound(5)
+      else
+        equipped_weapon.hit(enemy)
+      end
     end
   end
 ########################
@@ -47,6 +55,20 @@ def wound(damage)
     raise StandardError.new("THATS NOT A ROBOT!") if enemy.is_a?(Item)
   end
 
+  def with_in_reach?(enemy)
+    #enemy position is +2 more in anydirection, then attak wont register
+    #enemy [0]>=2 than robot
+    #enemy [1]>=2 than robot
+    x_coord = (@position[0] - enemy.position[0]).abs
+    y_coord = (@position[1] - enemy.position[1]).abs
+    (x_coord < 2) && (y_coord < 2)
+  end
+
+  def grenade_range?(enemy)
+    x_coord = (@position[0] - enemy.position[0]).abs
+    y_coord = (@position[1] - enemy.position[1]).abs
+    (x_coord < 3) && (y_coord < 3)
+  end
   def move_left
     @position[0] -= 1
   end
@@ -68,8 +90,17 @@ def wound(damage)
   end
 ##########
   def pick_up(item)
-    @items << item if items_weight + item.weight <= 250
-    @equipped_weapon = item if item.is_a?(Weapon)
+    if item.is_a?(BoxOfBolts)
+      if health <= 80
+        item.feed(self)
+      elsif items_weight + item.weight <= 250
+        items << item 
+      end
+    elsif item.is_a?(Weapon)
+      equipped_weapon = item
+    elsif items_weight + item.weight <= 250
+        items << item 
+    end
   end
 ##########
   def items_weight
