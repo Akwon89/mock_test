@@ -8,17 +8,4 @@ attr_accessor :name, :weight
     @weight = weight
   end
 
-
-
-
-
-
-
-
-
-
-
-
-
-
 end

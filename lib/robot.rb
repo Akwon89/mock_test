@@ -1,23 +1,68 @@
 class Robot
 
-attr_reader :position, :items
-attr_accessor :equipped_weapon, :health
+attr_reader :items, :all_robots
+attr_accessor :equipped_weapon, :health, :shield, :position
 
+@@all_robots = []
 
   def initialize
     @position = [0, 0]
     @items = []
     @health = 100
+    @shield = 50
     # @equipped_weapon = nil
+    @@all_robots << self
+  end
+
+  def self.all
+    @@all_robots
+  end
+
+  def self.in_position
+    robots_positions = []
+    @@all_robots.select do |robot|
+      robots_positions << robot.position
+    end
+    robots_positions
+  end
+
+  def scan
+    robot_around = []
+    @@all_robots.select do |robot|
+      if ((robot.position[0] - self.position[0]) < 2 ) && ((robot.position[1] - self.position[1]) < 2 )
+        robot_around << robot
+        end
+      end
+    robot_around
   end
 #first pass################
   # def wound(damage)
   #    @health -= damage
   # end
 #second pass###############
+# def wound(damage)
+#      (@health - damage) > 0 ? @health -= damage : @health = 0
+#   end
+################
+
 def wound(damage)
-     (@health - damage) > 0 ? @health -= damage : @health = 0
+  if (@shield >= damage)
+    @shield -= damage
+  else 
+    remaining_damage = damage - @shield
+    @shield = 0
+    if (@health - remaining_damage) > 0 
+      @health -= remaining_damage
+    else
+      @health = 0
+    end
   end
+end
+
+def charge(amount)
+  (@shield + amount) <= 50? @shield += amount : @shield = 50
+end
+
 #first pass#################
   # def heal(amount)
   #   @health += amount
@@ -37,16 +82,16 @@ def wound(damage)
 ##########################
   def attack(enemy)
     attack!(enemy)
-    if grenade_range?(enemy)
-      if equipped_weapon.is_a?(Grenade)
-        equipped_weapon.hit(enemy)
-        self.equipped_weapon = nil
-      end
-    elsif with_in_reach?(enemy)
-      if equipped_weapon == nil
+    if with_in_reach?(enemy)
+      if @equipped_weapon.nil?
         enemy.wound(5)
       else
-        equipped_weapon.hit(enemy)
+        @equipped_weapon.hit(enemy)
+      end
+    elsif grenade_range?(enemy)
+      if @equipped_weapon.is_a?(Grenade)
+        @equipped_weapon.hit(enemy)
+        @equipped_weapon = nil
       end
     end
   end
@@ -90,7 +135,13 @@ def wound(damage)
   end
 ##########
   def pick_up(item)
-    if item.is_a?(BoxOfBolts)
+    if item.is_a?(Battery)
+      if shield <= 40
+        item.use(self)
+      elsif items_weight + item.weight <= 250
+        items << item
+      end
+    elsif item.is_a?(BoxOfBolts)
       if health <= 80
         item.feed(self)
       elsif items_weight + item.weight <= 250
